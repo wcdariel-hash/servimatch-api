@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 import models
-from routers import auth, services, bookings, chat
+from routers import auth, services, bookings, chat, admin
 
 # Crear tablas de base de datos
 Base.metadata.create_all(bind=engine)
@@ -23,6 +23,7 @@ app.include_router(auth.router)
 app.include_router(services.router)
 app.include_router(bookings.router)
 app.include_router(chat.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():
