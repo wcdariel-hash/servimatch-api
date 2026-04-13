@@ -27,7 +27,7 @@ app.include_router(admin.router)
 
 @app.get("/")
 def read_root():
-    return {"message": "Bienvenido a ServiMatch API Premium", "v": "1.0.2"}
+    return {"message": "Bienvenido a ServiMatch API Premium", "v": "1.0.4"}
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
