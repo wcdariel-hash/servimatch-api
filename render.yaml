@@ -1,0 +1,25 @@
+databases:
+  - name: servimatch-db
+    databaseName: servimatch
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: servimatch-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: servimatch-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        value: 981190772478-e0222kqd2qpfhq255o1enio18dnt9fjv.apps.googleusercontent.com
+      - key: PYTHON_VERSION
+        value: 3.11.6
