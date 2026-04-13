@@ -20,17 +20,17 @@ def seed_database(x_admin_secret: str = Header(None), db: Session = Depends(get_
         raise HTTPException(status_code=403, detail="Invalid admin secret")
 
     try:
-        # 1. Clean existing data
-        db.query(models.Booking).delete()
-        db.query(models.Message).delete()
-        db.query(models.ServiceModel).delete()
-        db.query(models.User).delete()
-        db.commit()
+        # 1. Skip Deletion to avoid Foreign Key issues on initial seed
+        # We manually check if users exist instead
+        test_email = "test@email.com"
+        existing_user = db.query(models.User).filter(models.User.email == test_email).first()
+        if existing_user:
+             return {"message": "Database already contains seed data", "status": "no-op"}
 
         # 2. Create Test Users
         password_hash = get_password_hash("dcastillo2009")
         test_user = models.User(
-            email="test@email.com",
+            email=test_email,
             full_name="Usuario de Prueba",
             hashed_password=password_hash,
             balance=500.0,
