@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -33,6 +33,17 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "981190772478-e0222kqd2qpfhq255
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+def record_login_attempt(db: Session, email: str, status: str, reason: str = None, request: Request = None):
+    audit = models.LoginAudit(
+        email=email,
+        status=status,
+        reason=reason,
+        ip_address=request.client.host if request else None,
+        user_agent=request.headers.get("user-agent") if request else None
+    )
+    db.add(audit)
+    db.commit()
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -164,14 +175,27 @@ def verify_phone(email: str, code: str, db: Session = Depends(get_db)):
     return {"message": "Teléfono verificado exitosamente"}
 
 @router.post("/login", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    
+    if not user:
+        record_login_attempt(db, form_data.username, "FAIL", "Usuario no encontrado", request)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    if not verify_password(form_data.password, user.hashed_password):
+        record_login_attempt(db, form_data.username, "FAIL", "Contraseña incorrecta", request)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Éxito
+    record_login_attempt(db, user.email, "SUCCESS", None, request)
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -246,9 +270,13 @@ def google_auth(google_token: str, db: Session = Depends(get_db)):
         )
         return {"access_token": access_token, "token_type": "bearer"}
 
-    except ValueError:
+    except ValueError as e:
         # Token inválido
+        record_login_attempt(db, "unknown_google", "FAIL", f"Token Google Inválido: {str(e)}")
         raise HTTPException(status_code=400, detail="Token de Google inválido")
+    except Exception as e:
+        record_login_attempt(db, "google_error", "ABORTED", str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/me", response_model=schemas.UserResponse)
 def get_me(current_user: models.User = Depends(get_current_user)):

@@ -82,3 +82,14 @@ class Message(Base):
     
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
+
+class LoginAudit(Base):
+    __tablename__ = "login_audit"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True)
+    status = Column(String) # "SUCCESS", "FAIL", "ABORTED"
+    reason = Column(String, nullable=True) # "Incorrect Password", "User Not Found", etc.
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True) # Para saber si es Opera, Chrome, etc.
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
