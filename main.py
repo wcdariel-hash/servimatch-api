@@ -12,7 +12,10 @@ app = FastAPI(title="ServiMatch API Premium")
 # Configurar CORS para Flutter Web
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5000",
+        "https://servimatch-api.onrender.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
