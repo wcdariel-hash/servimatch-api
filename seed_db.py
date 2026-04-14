@@ -16,12 +16,15 @@ models.Base.metadata.create_all(bind=engine)
 def seed():
     db = SessionLocal()
     
-    # 1. Limpiar datos previos
-    db.query(models.Booking).delete()
-    db.query(models.Message).delete()
-    db.query(models.ServiceModel).delete()
-    db.query(models.User).delete()
-    db.commit()
+    # Comprobar si ya existe el usuario maestro para evitar duplicados y bloqueos
+    existing_user = db.query(models.User).filter(models.User.email == "test@email.com").first()
+    if existing_user:
+        print("Usuario maestro ya existe. Saltando seeding para estabilidad.")
+        db.close()
+        return
+
+    # Solo llegamos aquí si la DB está vacía o falta el usuario maestro
+    print("Iniciando poblado de base de datos (Primera vez)...")
 
     # 2. Crear Usuarios de Prueba
     test_user = models.User(
