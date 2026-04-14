@@ -15,6 +15,14 @@ limiter = Limiter(key_func=get_remote_address)
 # Crear tablas de base de datos
 Base.metadata.create_all(bind=engine)
 
+# Auto-Seed de Emergencia para asegurar usuario maestro
+from seed_db import seed
+try:
+    seed()
+    print("Base de Datos Sincronizada Automáticamente.")
+except Exception as e:
+    print(f"Aviso de Seeding: {e}")
+
 app = FastAPI(title="ServiMatch API Premium")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
